@@ -56,7 +56,12 @@ in
       armTrustedFirmwareAllwinner
       armTrustedFirmwareRK3399
       armTrustedFirmwareS905
+      armTrustedFirmwareMochabin
+      armTrustedFirmwareMochabin2GBBLE
+      armTrustedFirmwareMochabin4GBBLE
+      armTrustedFirmwareMochabin8GBBLE
       armTrustedFirmwareTools
+      armTrustedFirmwareToolsMarvell
     ;
 
     crustFirmware = final.callPackage ./crust-firmware {

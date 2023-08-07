@@ -7,7 +7,7 @@
 #
 # Origin: https://github.com/NixOS/nixpkgs/blob/0cbb80e7f162fac25fdd173d38136068ed6856bb/pkgs/misc/arm-trusted-firmware/default.nix
 
-{ lib, stdenv, fetchFromGitHub, openssl, pkgsCross, buildPackages }:
+{ lib, stdenv, fetchFromGitHub, openssl, pkgsCross, buildPackages, git }:
 
 let
   buildArmTrustedFirmware = { filesToInstall
@@ -64,6 +64,42 @@ let
     } // extraMeta;
   } // builtins.removeAttrs args [ "extraMeta" ]);
 
+  buildArmTrustedFirmwareMarvellBLE = let
+    mv-ddr = fetchFromGitHub {
+      owner = "MarvellEmbeddedProcessors";
+      repo = "mv-ddr-marvell";
+      # master as of 2023-08-07
+      rev = "541616bc5d25a0167c9901546255c55973e2c0f0";
+      leaveDotGit = true;
+      sha256 = "sha256:18pir48jfqgx436nj3bzfbx3kl91wyw197z59dalxjhhsz0zgk2d";
+    };
+  in { platform
+  , mvDdrSrc ? mv-ddr
+  , extraMeta ? {}
+  , ... }@args: buildArmTrustedFirmware ({
+    extraMakeFlags = [
+      "SCP_BL2=/dev/null"
+      "ble"
+    ];
+
+    postPatch = ''
+      export MV_DDR_PATH=$NIX_BUILD_TOP/mv-ddr
+      cp -R ${mv-ddr} $MV_DDR_PATH
+      chmod -R +w $MV_DDR_PATH
+      sed -i 's,-Werror,-Wno-error,g' $MV_DDR_PATH/Makefile
+    '';
+
+    nativeBuildInputs = [ pkgsCross.arm-embedded.stdenv.cc git ];
+
+    inherit platform;
+    extraMeta = extraMeta // {
+      platforms = ["aarch64-linux"];
+    };
+    filesToInstall = [
+      "build/${platform}/release/ble.bin"
+    ];
+  } // builtins.removeAttrs args [ "mvDdrSrc" "extraMeta" ]);
+
 in {
   inherit buildArmTrustedFirmware;
 
@@ -75,6 +111,21 @@ in {
     filesToInstall = [
       "tools/fiptool/fiptool"
       "tools/cert_create/cert_create"
+    ];
+    postInstall = ''
+      mkdir -p "$out/bin"
+      find "$out" -type f -executable -exec mv -t "$out/bin" {} +
+    '';
+  };
+
+  armTrustedFirmwareToolsMarvell = buildArmTrustedFirmware rec {
+    extraMakeFlags = [
+      "HOSTCC=${stdenv.cc.targetPrefix}gcc"
+      "-C" "tools/marvell/doimage"
+      "doimage"
+    ];
+    filesToInstall = [
+      "tools/marvell/doimage/doimage"
     ];
     postInstall = ''
       mkdir -p "$out/bin"
@@ -117,5 +168,29 @@ in {
     platform = "gxbb";
     extraMeta.platforms = ["aarch64-linux"];
     filesToInstall = [ "build/${platform}/release/bl31.bin"];
+  };
+
+  armTrustedFirmwareMochabin = buildArmTrustedFirmware rec {
+    extraMakeFlags = [ "SCP_BL2=/dev/null" "bl1" "bl2" "bl31" ];
+    platform = "a70x0_mochabin";
+    extraMeta.platforms = ["aarch64-linux"];
+    filesToInstall = [
+      "build/${platform}/release/bl1.bin"
+      "build/${platform}/release/bl2.bin"
+      "build/${platform}/release/bl31.bin"
+    ];
+  };
+
+  armTrustedFirmwareMochabin2GBBLE = buildArmTrustedFirmwareMarvellBLE {
+    DDR_TOPOLOGY = 0;
+    platform = "a70x0_mochabin";
+  };
+  armTrustedFirmwareMochabin4GBBLE = buildArmTrustedFirmwareMarvellBLE {
+    DDR_TOPOLOGY = 1;
+    platform = "a70x0_mochabin";
+  };
+  armTrustedFirmwareMochabin8GBBLE = buildArmTrustedFirmwareMarvellBLE {
+    DDR_TOPOLOGY = 2;
+    platform = "a70x0_mochabin";
   };
 }
