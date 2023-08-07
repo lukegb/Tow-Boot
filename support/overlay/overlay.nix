@@ -70,6 +70,8 @@ in
 
     amlogicFirmware = callPackage ./amlogic-firmware { };
 
+    binariesMarvell = callPackage ./binaries-marvell { };
+
     gxlimg = callPackage ./gxlimg { };
 
     meson64-tools = callPackage ./meson64-tools { };
