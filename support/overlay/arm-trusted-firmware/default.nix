@@ -68,10 +68,9 @@ let
     mv-ddr = fetchFromGitHub {
       owner = "MarvellEmbeddedProcessors";
       repo = "mv-ddr-marvell";
-      # master as of 2023-08-07
-      rev = "541616bc5d25a0167c9901546255c55973e2c0f0";
-      leaveDotGit = true;
-      sha256 = "sha256:18pir48jfqgx436nj3bzfbx3kl91wyw197z59dalxjhhsz0zgk2d";
+      # master as of 2024-07-09
+      rev = "4a3dc0909b64fac119d4ffa77840267b540b17ba";
+      hash = "sha256-atsj0FCEkMLfnABsaJZGHKO0ZKad19jsKAkz39fIcFY=";
     };
   in { platform
   , mvDdrSrc ? mv-ddr
@@ -86,6 +85,7 @@ let
       export MV_DDR_PATH=$NIX_BUILD_TOP/mv-ddr
       cp -R ${mv-ddr} $MV_DDR_PATH
       chmod -R +w $MV_DDR_PATH
+      git -C $MV_DDR_PATH init
       sed -i 's,-Werror,-Wno-error,g' $MV_DDR_PATH/Makefile
     '';
 
